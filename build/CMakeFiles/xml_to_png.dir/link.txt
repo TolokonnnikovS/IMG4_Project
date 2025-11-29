@@ -1,0 +1,3 @@
+C:\msys64\mingw64\bin\cmake.exe -E rm -f CMakeFiles\xml_to_png.dir/objects.a
+C:\msys64\mingw64\bin\ar.exe qc CMakeFiles\xml_to_png.dir/objects.a @CMakeFiles\xml_to_png.dir\objects1.rsp
+C:\msys64\mingw64\bin\c++.exe  -Wall -Wextra -Wpedantic -Wl,--whole-archive CMakeFiles\xml_to_png.dir/objects.a -Wl,--no-whole-archive -o xml_to_png.exe -Wl,--out-implib,libxml_to_png.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\xml_to_png.dir\linkLibs.rsp
