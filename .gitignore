@@ -1,1 +1,31 @@
-vcpkg
+# Папки сборки
+build/
+CMakeFiles/
+
+# Файлы CMake
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+
+# Скомпилированные файлы
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.exe
+
+# Файлы IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Выходные данные программы
+xml_png/*.png
+
+# Резервные копии
+*~
+*.bak
