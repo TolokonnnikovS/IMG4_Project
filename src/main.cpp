@@ -3,104 +3,119 @@
 #include "xml_parser.h"
 #include "image_generator.h"
 #include "utils.h"
+#include <argparse/argparse.hpp>
 
-int main() {
-    // Вывод заголовка программы
+int main(int argc, char* argv[]) {
+    // 1. Создаем парсер аргументов командной строки
+    argparse::ArgumentParser program("fbt_to_png", "1.0");
+    
+    // 2. Добавляем описание программы (будет показано в справке)
+    program.add_description("Конвертер FBT-файлов в PNG-изображения функциональных блоков IEC 61499");
+    
+    // 3. Добавляем аргументы
+    program.add_argument("-i", "--input")
+        .help("директория с входными .fbt файлами (по умолчанию: xml)")
+        .default_value(std::string("xml"))
+        .metavar("DIR");
+    
+    program.add_argument("-o", "--output")
+        .help("директория для выходных .png файлов (по умолчанию: xml_png)")
+        .default_value(std::string("xml_png"))
+        .metavar("DIR");
+
+    try {
+        // 4. Парсим аргументы командной строки
+        program.parse_args(argc, argv);
+    } catch (const std::exception& err) {
+        // 5. Ошибка парсинга (например, пользователь ввел неверный аргумент)
+        std::cerr << err.what() << std::endl;
+        std::cerr << program;
+        return 1;
+    }
+    
+    std::string inputDir = program.get<std::string>("--input");
+    std::string outputDir = program.get<std::string>("--output");
+    
     std::cout << "FBT to PNG Converter" << std::endl;
     std::cout << "====================" << std::endl;
     
-    // Список возможных директорий для поиска входных файлов
-    // Программа проверяет несколько стандартных расположений
+    // Пробуем несколько возможных путей
     std::vector<std::string> possibleInputDirs = {
-        "../xml",  // Директория на уровень выше
-        "./xml",   // Директория в текущей папке
-        "xml",     // Поддиректория xml
-        "."        // Текущая директория
+        "../" + inputDir,
+        "./" + inputDir, 
+        inputDir,
+        "."
     };
     
-    std::string inputDir;  // Найденная директория с файлами
-    std::vector<std::string> files;  // Список найденных .fbt файлов
+    std::string foundInputDir;
+    std::vector<std::string> files;
     
-    // Поиск директории с файлами .fbt
-    // Проверяем каждую возможную директорию по порядку
+    // Ищем директорию с файлами
     for (const auto& dir : possibleInputDirs) {
         std::cout << "Checking directory: " << dir << std::endl;
         auto foundFiles = utils::getFilesInDirectory(dir, ".fbt");
         if (!foundFiles.empty()) {
-            files = foundFiles;        // Сохраняем найденные файлы
-            inputDir = dir;            // Запоминаем директорию
-            break;                     // Прекращаем поиск после первой находки
+            files = foundFiles;
+            foundInputDir = dir;
+            break;
         }
     }
     
-    // Имя выходной директории для PNG файлов
-    std::string outputDir = "xml_png";
-    
-    // Создаем выходную директорию, если она не существует
+    // Создаем выходную директорию
     utils::createDirectoryIfNotExists(outputDir);
     
-    // Проверка: найдены ли файлы для обработки
     if (files.empty()) {
         std::cerr << "ERROR: No .fbt files found in any of the expected directories!" << std::endl;
         std::cerr << "Please make sure your .fbt files are in one of these locations:" << std::endl;
         for (const auto& dir : possibleInputDirs) {
             std::cerr << "  - " << dir << std::endl;
         }
-        return 1;  // Возвращаем код ошибки
+        std::cerr << "\nИли укажите правильную директорию с помощью --input" << std::endl;
+        return 1;
     }
     
-    // Вывод информации о найденных файлах
-    std::cout << "Found " << files.size() << " .fbt files in: " << inputDir << std::endl;
+    std::cout << "Found " << files.size() << " .fbt files in: " << foundInputDir << std::endl;
     for (const auto& file : files) {
-        std::cout << "  - " << file << std::endl;  // Печать имени каждого файла
+        std::cout << "  - " << file << std::endl;
     }
     
-    // Создание объектов для парсинга XML и генерации изображений
-    XmlParser parser;            // Парсер XML файлов
-    ImageGenerator generator;    // Генератор PNG изображений
+    XmlParser parser;
+    ImageGenerator generator;
     
-    int successCount = 0;  // Счетчик успешно обработанных файлов
-    int errorCount = 0;    // Счетчик файлов с ошибками
+    int successCount = 0;
+    int errorCount = 0;
     
-    // Основной цикл обработки файлов
     for (const auto& file : files) {
         std::cout << "\nProcessing: " << file << std::endl;
         
-        // Проверка существования файла
         if (!utils::fileExists(file)) {
             std::cerr << "File does not exist: " << file << std::endl;
-            errorCount++;  // Увеличиваем счетчик ошибок
-            continue;      // Переходим к следующему файлу
+            errorCount++;
+            continue;
         }
         
-        // Парсинг XML файла
         if (parser.parseFile(file)) {
-            // Получаем имя файла без расширения для создания выходного имени
             std::string baseName = utils::getFileNameWithoutExtension(file);
-            // Формируем полный путь для выходного PNG файла
             std::string outputFile = outputDir + "/" + baseName + ".png";
             
-            // Генерация PNG изображения из распарсенных данных
             if (generator.generateImageFromXml(parser.getRootNode(), outputFile)) {
-                std::cout << "✓ Created: " << outputFile << std::endl;
-                successCount++;  // Увеличиваем счетчик успехов
+                std::cout << "[OK] Created: " << outputFile << std::endl;
+                successCount++;
             } else {
-                std::cerr << "✗ Failed to create image for: " << file << std::endl;
-                errorCount++;  // Увеличиваем счетчик ошибок
+                std::cerr << "[ERROR] Failed to create image for: " << file << std::endl;
+                errorCount++;
             }
         } else {
-            // Ошибка парсинга XML файла
-            std::cerr << "✗ Failed to parse: " << file << std::endl;
-            errorCount++;  // Увеличиваем счетчик ошибок
+            std::cerr << "[ERROR] Failed to parse: " << file << std::endl;
+            errorCount++;
         }
     }
     
-    // Вывод итоговой статистики обработки
     std::cout << "\n=== Conversion Summary ===" << std::endl;
     std::cout << "Success: " << successCount << " files" << std::endl;
     std::cout << "Errors: " << errorCount << " files" << std::endl;
     std::cout << "Total: " << files.size() << " files processed" << std::endl;
+    std::cout << "Output directory: " << outputDir << std::endl;
     
-    // Возвращаем код возврата: 0 - если нет ошибок, 1 - если были ошибки
     return (errorCount > 0) ? 1 : 0;
 }

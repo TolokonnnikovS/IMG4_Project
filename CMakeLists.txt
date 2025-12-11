@@ -26,7 +26,14 @@ FetchContent_Declare(
     GIT_TAG VER-2-13-2
 )
 
-FetchContent_MakeAvailable(pugixml libpng freetype)
+# argparse - НОВАЯ БИБЛИОТЕКА ДЛЯ АРГУМЕНТОВ КОМАНДНОЙ СТРОКИ
+FetchContent_Declare(
+    argparse
+    GIT_REPOSITORY https://github.com/p-ranav/argparse.git
+    GIT_TAG v2.9
+)
+
+FetchContent_MakeAvailable(pugixml libpng freetype argparse)
 
 add_executable(fbt_to_png
     src/main.cpp
@@ -40,6 +47,7 @@ target_include_directories(fbt_to_png PRIVATE
     ${pugixml_SOURCE_DIR}/src
     ${libpng_SOURCE_DIR}
     ${freetype_SOURCE_DIR}/include
+    ${argparse_SOURCE_DIR}/include
 )
 
 target_link_libraries(fbt_to_png PRIVATE
