@@ -1,5 +1,4 @@
 #include "image_generator.h"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 #include <iostream>
 #include <vector>
@@ -71,7 +70,7 @@ bool ImageGenerator::createFBImage(const XmlNode& rootNode, const std::string& o
     drawFBDiagram(rootNode, image_data.data());
 
     // 3. Сохраняем в PNG
-    bool success = stbi_write_png(
+    bool success = stbi_write_png( // 176 Строка stb_image_write.h
         outputPath.c_str(),     // имя файла
         imageWidth_,           // ширина
         imageHeight_,          // высота
@@ -97,6 +96,8 @@ void ImageGenerator::drawText(const std::string& text, unsigned char* image_data
         return;
     }
 
+    // Устанавливам размер шрифта в пикселях (растровый размер),
+    // который будет использоваться для последующего рендеринга
     FT_Set_Pixel_Sizes(ftFace_, 0, fontSize);
 
     // Применение курсивного наклона
