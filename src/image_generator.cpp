@@ -1,5 +1,6 @@
 #include "image_generator.h"
-#include <png.h>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -60,68 +61,32 @@ bool ImageGenerator::generateImageFromXml(const XmlNode& rootNode, const std::st
 bool ImageGenerator::createFBImage(const XmlNode& rootNode, const std::string& outputPath) {
     std::cout << "Creating Functional Block diagram: " << outputPath << std::endl;
 
-    FILE* fp = fopen(outputPath.c_str(), "wb");
-    if (!fp) {
-        std::cerr << "Cannot open file for writing: " << outputPath << std::endl;
-        return false;
-    }
-
-    // Инициализация структур PNG
-    png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    if (!png_ptr) {
-        fclose(fp);
-        std::cerr << "Failed to create PNG write structure" << std::endl;
-        return false;
-    }
-
-    png_infop info_ptr = png_create_info_struct(png_ptr);
-    if (!info_ptr) {
-        png_destroy_write_struct(&png_ptr, NULL);
-        fclose(fp);
-        std::cerr << "Failed to create PNG info structure" << std::endl;
-        return false;
-    }
-
-    if (setjmp(png_jmpbuf(png_ptr))) {
-        png_destroy_write_struct(&png_ptr, &info_ptr);
-        fclose(fp);
-        std::cerr << "Error during PNG creation" << std::endl;
-        return false;
-    }
-
-    png_init_io(png_ptr, fp);
-
-    // Установка параметров PNG
-    png_set_IHDR(png_ptr, info_ptr, imageWidth_, imageHeight_, 8, 
-                 PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
-                 PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-
-    png_write_info(png_ptr, info_ptr);
-
-    // Создание белого фона
+    // 1. Создаем белый фон в памяти
     std::vector<unsigned char> image_data(imageWidth_ * imageHeight_ * 3);
     for (size_t i = 0; i < image_data.size(); i++) {
         image_data[i] = 255;
     }
 
-    // Отрисовка диаграммы функционального блока
+    // 2. Отрисовка диаграммы функционального блока
     drawFBDiagram(rootNode, image_data.data());
 
-    // Подготовка данных для записи
-    std::vector<png_byte*> row_pointers(imageHeight_);
-    for (int y = 0; y < imageHeight_; y++) {
-        row_pointers[y] = &image_data[y * imageWidth_ * 3];
+    // 3. Сохраняем в PNG
+    bool success = stbi_write_png(
+        outputPath.c_str(),     // имя файла
+        imageWidth_,           // ширина
+        imageHeight_,          // высота
+        3,                     // RGB (3 компонента)
+        image_data.data(),     // данные изображения
+        imageWidth_ * 3        // stride = ширина * 3
+    );
+
+    if (success) {
+        std::cout << "Successfully created: " << outputPath << std::endl;
+        return true;
+    } else {
+        std::cerr << "Failed to create PNG: " << outputPath << std::endl;
+        return false;
     }
-
-    png_write_image(png_ptr, row_pointers.data());
-    png_write_end(png_ptr, NULL);
-
-    // Освобождение ресурсов
-    png_destroy_write_struct(&png_ptr, &info_ptr);
-    fclose(fp);
-
-    std::cout << "Successfully created: " << outputPath << std::endl;
-    return true;
 }
 
 // Отрисовка текста с использованием FreeType

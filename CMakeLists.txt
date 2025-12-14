@@ -13,12 +13,6 @@ FetchContent_Declare(
     GIT_TAG v1.14
 )
 
-# libpng - НОВАЯ ВЕРСИЯ 1.6.40
-FetchContent_Declare(
-    libpng
-    URL https://download.sourceforge.net/libpng/libpng-1.6.40.tar.gz
-)
-
 # freetype
 FetchContent_Declare(
     freetype
@@ -26,14 +20,21 @@ FetchContent_Declare(
     GIT_TAG VER-2-13-2
 )
 
-# argparse - НОВАЯ БИБЛИОТЕКА ДЛЯ АРГУМЕНТОВ КОМАНДНОЙ СТРОКИ
+# argparse
 FetchContent_Declare(
     argparse
     GIT_REPOSITORY https://github.com/p-ranav/argparse.git
     GIT_TAG v2.9
 )
 
-FetchContent_MakeAvailable(pugixml libpng freetype argparse)
+# stb (Новая библиотека для изображений)
+FetchContent_Declare(
+    stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+    GIT_TAG master
+)
+
+FetchContent_MakeAvailable(pugixml freetype argparse stb)
 
 add_executable(fbt_to_png
     src/main.cpp
@@ -45,15 +46,17 @@ add_executable(fbt_to_png
 target_include_directories(fbt_to_png PRIVATE
     src
     ${pugixml_SOURCE_DIR}/src
-    ${libpng_SOURCE_DIR}
     ${freetype_SOURCE_DIR}/include
     ${argparse_SOURCE_DIR}/include
+    ${stb_SOURCE_DIR}  # stb_image_write.h здесь
 )
 
 target_link_libraries(fbt_to_png PRIVATE
     pugixml
-    png
     freetype
 )
+
+# Копируем stb_image_write.h в нужную папку (опционально)
+file(COPY ${stb_SOURCE_DIR}/stb_image_write.h DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/xml_png)

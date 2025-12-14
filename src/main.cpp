@@ -28,8 +28,8 @@ int main(int argc, char* argv[]) {
         program.parse_args(argc, argv);
     } catch (const std::exception& err) {
         // 5. Ошибка парсинга (например, пользователь ввел неверный аргумент)
-        std::cerr << err.what() << std::endl;
-        std::cerr << program;
+        std::cerr << err.what() << "LIIIIINNEEEEE 1" <<  std::endl;
+        std::cerr << program << "ERROOOOOOR" << std::endl;
         return 1;
     }
     
