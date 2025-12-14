@@ -6,6 +6,7 @@
 #include <vector>
 #include <utility>
 #include <ft2build.h>
+#include FT_FREETYPE_H
 
 class ImageGenerator {
 public:
