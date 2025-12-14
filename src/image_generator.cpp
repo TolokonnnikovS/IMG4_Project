@@ -97,8 +97,8 @@ void ImageGenerator::drawText(const std::string& text, unsigned char* image_data
         return;
     }
 
-    // Устанавливам размер шрифта в пикселях (растровый размер),
-    // который будет использоваться для последующего рендеринга
+    /* Устанавливам размер шрифта в пикселях (растровый размер),
+     который будет использоваться для последующего рендеринга*/
     FT_Set_Pixel_Sizes(ftFace_, 0, fontSize);
 
     // Применение курсивного наклона
@@ -114,36 +114,70 @@ void ImageGenerator::drawText(const std::string& text, unsigned char* image_data
     }
 
     // Эффект жирного шрифта через многократную отрисовку
-    if (bold) {
-        int pen_x = x;
+    if (bold) { // Если требуется жирный шрифт
+        int pen_x = x; // Начальная позиция "пера" (курсора) по горизонтали
+        
+        // Цикл по всем символам строки
         for (size_t i = 0; i < text.length(); i++) {
-            char c = text[i];
+            char c = text[i]; // Текущий символ
             
+            // Загружаем и рендерим символ в битмап
+            // FT_LOAD_RENDER означает: загрузить + сразу растеризовать
             if (FT_Load_Char(ftFace_, c, FT_LOAD_RENDER)) {
-                continue;
+                continue; // Если ошибка загрузки, пропускаем этот символ
             }
 
+            // Получаем указатель на растровое изображение символа
             FT_Bitmap* bitmap = &ftFace_->glyph->bitmap;
             
             // Рисуем с смещениями для жирного эффекта
-            for (int offset_x = -1; offset_x <= 1; offset_x++) {
-                for (int offset_y = -1; offset_y <= 1; offset_y++) {
-                    if (offset_x == 0 && offset_y == 0) continue;
+            // Жирность достигается многократной отрисовкой со смещениями
+            for (int offset_x = -1; offset_x <= 1; offset_x++) { // Смещение по X: -1, 0, 1
+                for (int offset_y = -1; offset_y <= 1; offset_y++) { // Смещение по Y: -1, 0, 1
+                    if (offset_x == 0 && offset_y == 0) continue; // Пропускаем центральную позицию
+                    // Отрисовываем 8 раз вокруг центра (все комбинации кроме 0,0)
                     
+                    // Проходим по всем строкам (пикселям по вертикали) битмапа
                     for (unsigned int row = 0; row < bitmap->rows; ++row) {
+                        // Проходим по всем столбцам (пикселям по горизонтали) битмапа
                         for (unsigned int col = 0; col < bitmap->width; ++col) {
+                            // Получаем значение альфа-канала (прозрачности) пикселя
+                            // pitch - количество байт от начала одной строки до начала следующей
                             unsigned char alpha = bitmap->buffer[row * bitmap->pitch + col];
+                            
+                            // Если пиксель не полностью прозрачный
                             if (alpha > 0) {
+                                // Вычисляем координаты пикселя на целевом изображении
+                                // pen_x - текущая позиция базовой линии
+                                // bitmap_left - левый отступ глифа (может быть отрицательным для букв типа 'j')
+                                // col - текущий столбец в битмапе
+                                // offset_x - смещение для жирности
                                 int px = pen_x + ftFace_->glyph->bitmap_left + col + offset_x;
+                                
+                                // y - базовая линия текста
+                                // bitmap_top - верхний отступ глифа (расстояние от базовой линии до верха)
+                                // row - текущая строка в битмапе
+                                // fontSize/2 - эмпирическая коррекция (автор обнаружил, что текст рисуется высоко)
+                                // offset_y - смещение для жирности
                                 int py = y - ftFace_->glyph->bitmap_top + row + fontSize / 2 + offset_y;
                                 
+                                // Проверяем, не выходит ли пиксель за границы изображения
                                 if (px >= 0 && px < imageWidth_ && py >= 0 && py < imageHeight_) {
+                                    // Вычисляем индекс в массиве image_data
+                                    // Каждый пиксель занимает 3 байта (RGB)
                                     int index = (py * imageWidth_ + px) * 3;
+                                    
+                                    // Преобразуем альфа-значение (0-255) в коэффициент смешивания (0.0-1.0)
                                     float blend = alpha / 255.0f;
                                     
-                                    image_data[index] = static_cast<unsigned char>((1 - blend) * image_data[index] + blend * r);
-                                    image_data[index + 1] = static_cast<unsigned char>((1 - blend) * image_data[index + 1] + blend * g);
-                                    image_data[index + 2] = static_cast<unsigned char>((1 - blend) * image_data[index + 2] + blend * b);
+                                    // Смешиваем цвет текста с существующим цветом фона (альфа-блендинг)
+                                    // Формула: новый_цвет = (1 - alpha) * старый_цвет + alpha * цвет_текста
+                                    image_data[index] = static_cast<unsigned char>(
+                                        (1 - blend) * image_data[index] + blend * r);
+                                    image_data[index + 1] = static_cast<unsigned char>(
+                                        (1 - blend) * image_data[index + 1] + blend * g);
+                                    image_data[index + 2] = static_cast<unsigned char>(
+                                        (1 - blend) * image_data[index + 2] + blend * b);
                                 }
                             }
                         }
@@ -151,45 +185,63 @@ void ImageGenerator::drawText(const std::string& text, unsigned char* image_data
                 }
             }
 
+            // Сдвигаем "перо" для следующего символа
+            // advance.x - расстояние до следующего символа в формате 26.6 фиксированной точки
+            // >> 6 - сдвиг вправо на 6 битов = деление на 64 (преобразование в пиксели)
             pen_x += (ftFace_->glyph->advance.x >> 6);
         }
     }
 
-    // Основная отрисовка текста
-    int pen_x = x;
+    // Основная отрисовка текста (выполняется всегда, независимо от bold)
+    // Если bold=true, это центральная отрисовка поверх "тени"
+    // Если bold=false, это единственная отрисовка
+    int pen_x = x; // Начальная позиция "пера" (сбрасываем для новой отрисовки)
     for (size_t i = 0; i < text.length(); i++) {
-        char c = text[i];
+        char c = text[i]; // Текущий символ
         
+        // Загружаем и рендерим символ
         if (FT_Load_Char(ftFace_, c, FT_LOAD_RENDER)) {
-            continue;
+            continue; // Пропускаем при ошибке
         }
 
+        // Получаем битмап символа
         FT_Bitmap* bitmap = &ftFace_->glyph->bitmap;
+        
+        // Проходим по всем пикселям битмапа
         for (unsigned int row = 0; row < bitmap->rows; ++row) {
             for (unsigned int col = 0; col < bitmap->width; ++col) {
                 unsigned char alpha = bitmap->buffer[row * bitmap->pitch + col];
-                if (alpha > 0) {
-                    int px = pen_x + ftFace_->glyph->bitmap_left + col;
-                    int py = y - ftFace_->glyph->bitmap_top + row + fontSize / 2;
+                if (alpha > 0) { // Если пиксель не прозрачный
+                    // Координаты БЕЗ смещений (основная отрисовка)
+                    int px = pen_x + ftFace_->glyph->bitmap_left + col; // Без offset_x
+                    int py = y - ftFace_->glyph->bitmap_top + row + fontSize / 2; // Без offset_y
                     
+                    // Проверка границ
                     if (px >= 0 && px < imageWidth_ && py >= 0 && py < imageHeight_) {
                         int index = (py * imageWidth_ + px) * 3;
                         float blend = alpha / 255.0f;
                         
-                        image_data[index] = static_cast<unsigned char>((1 - blend) * image_data[index] + blend * r);
-                        image_data[index + 1] = static_cast<unsigned char>((1 - blend) * image_data[index + 1] + blend * g);
-                        image_data[index + 2] = static_cast<unsigned char>((1 - blend) * image_data[index + 2] + blend * b);
+                        // Альфа-блендинг
+                        image_data[index] = static_cast<unsigned char>(
+                            (1 - blend) * image_data[index] + blend * r);
+                        image_data[index + 1] = static_cast<unsigned char>(
+                            (1 - blend) * image_data[index + 1] + blend * g);
+                        image_data[index + 2] = static_cast<unsigned char>(
+                            (1 - blend) * image_data[index + 2] + blend * b);
                     }
                 }
             }
         }
 
+        // Сдвигаем перо для следующего символа
         pen_x += (ftFace_->glyph->advance.x >> 6);
     }
 
+    // Сбрасываем матрицу преобразования (курсив) в исходное состояние
+    // nullptr в качестве матрицы означает единичную матрицу [1 0; 0 1]
+    // Важно: не оставлять преобразование активным для последующих операций
     FT_Set_Transform(ftFace_, nullptr, nullptr);
 }
-
 // Вычисление ширины текста в пикселях
 int ImageGenerator::getTextWidth(const std::string& text, int fontSize) {
     if (!ftFace_) {

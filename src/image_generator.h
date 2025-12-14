@@ -11,6 +11,9 @@
 class ImageGenerator {
 public:
     
+    ImageGenerator();
+    ~ImageGenerator();
+    
     bool generateImageFromXml(const XmlNode& rootNode, const std::string& outputPath);
     
 private:
