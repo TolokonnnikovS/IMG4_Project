@@ -201,7 +201,7 @@ void ImageGenerator::drawText(const std::string& text, unsigned char* image_data
         
         // Загружаем и рендерим символ
         if (FT_Load_Char(ftFace_, c, FT_LOAD_RENDER)) {
-            continue; // Пропускаем при ошибке
+            continue;
         }
 
         // Получаем битмап символа
@@ -213,8 +213,8 @@ void ImageGenerator::drawText(const std::string& text, unsigned char* image_data
                 unsigned char alpha = bitmap->buffer[row * bitmap->pitch + col];
                 if (alpha > 0) { // Если пиксель не прозрачный
                     // Координаты БЕЗ смещений (основная отрисовка)
-                    int px = pen_x + ftFace_->glyph->bitmap_left + col; // Без offset_x
-                    int py = y - ftFace_->glyph->bitmap_top + row + fontSize / 2; // Без offset_y
+                    int px = pen_x + ftFace_->glyph->bitmap_left + col;
+                    int py = y - ftFace_->glyph->bitmap_top + row + fontSize / 2;
                     
                     // Проверка границ
                     if (px >= 0 && px < imageWidth_ && py >= 0 && py < imageHeight_) {
@@ -238,8 +238,6 @@ void ImageGenerator::drawText(const std::string& text, unsigned char* image_data
     }
 
     // Сбрасываем матрицу преобразования (курсив) в исходное состояние
-    // nullptr в качестве матрицы означает единичную матрицу [1 0; 0 1]
-    // Важно: не оставлять преобразование активным для последующих операций
     FT_Set_Transform(ftFace_, nullptr, nullptr);
 }
 // Вычисление ширины текста в пикселях
