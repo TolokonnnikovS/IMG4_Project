@@ -504,10 +504,6 @@ void ImageGenerator::drawFBDiagram(const XmlNode& rootNode, unsigned char* image
         // Отрисовка вертикальной линии
         if (firstLineY > 0 && lastLineY > 0 && firstLineY != lastLineY) {
             drawLine(image_data, squareX, firstLineY, squareX, lastLineY, 0, 0, 0, 1);
-            
-            // Квадратики на концах
-            drawSquare(image_data, squareX, firstLineY, 8, 0, 0, 0, false);
-            drawSquare(image_data, squareX, lastLineY, 8, 0, 0, 0, false);
         }
     }
 }
