@@ -56,7 +56,4 @@ target_link_libraries(fbt_to_png PRIVATE
     freetype
 )
 
-# Копируем stb_image_write.h в нужную папку (опционально)
-file(COPY ${stb_SOURCE_DIR}/stb_image_write.h DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/src)
-
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/xml_png)
